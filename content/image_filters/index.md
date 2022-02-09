@@ -1,12 +1,12 @@
 +++
-title = "Computing image filters with Wgpu"
+title = "Computing image filters with wgpu-rs"
 date = "2022-02-09"
 
 [taxonomies]
 categories = ["rust", "wgpu"]
 +++
 
-This post should give you a few tips about creating a simple image processing pipeline with GPU computation, using wgpu and `rust` .
+This post should give you a few tips about creating a simple image processing pipeline with GPU computation, using `wgpu-rs` and `rust` .
 
 # Getting started
 
@@ -22,10 +22,35 @@ Nowadays, each rendering library has their own solution as well, and you can do 
 * DirectX 11+ on Windows
 * Vulkan everywhere.
 
-And guess what? In the `rust` ecosystem, `wgpu` is a great library that will abstract these different backends, and allow you to write portable GPU computation code that will run everywhere (I hope, I'm currently only trying the code on a Windows machine).
+And guess what? In the `rust` ecosystem, `wgpu-rs` is a great library that will abstract these different backends, and allow you to write portable GPU computation code that will run everywhere (I hope, I'm currently only trying the code on a Windows machine).
 
 **Who is the target of these article?**
 
 GPU programmer beginners like me with some decent notion of `rust` who like the idea of using their GPU for something else than graphics, but are still tinkering and wondering what they are doing at every step of the way.
 
 # Writing a simple grayscale filter
+
+## A few dependencies…
+
+Let's start with creating a new project.
+
+```bash
+cargo new image-filters
+```
+
+As always, this will create a new rust project, including a `Cargo.toml` file and a hello world `main.rs` file.
+Let's edit the `Cargo.toml` file and add all the dependencies we will need.
+
+```toml
+[package]
+name = "image-filters"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+anyhow = "1.0"
+bytemuck = "1.7"
+image = "0.24"
+tokio = { version = "1.16", features = ["full"] }
+wgpu = "0.12"
+```

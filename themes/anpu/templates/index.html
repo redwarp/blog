@@ -11,11 +11,7 @@
     <meta name="description" content="{{ config.description }}">
 
     <link rel="stylesheet" href="{{ get_url(path="main.css", trailing_slash=false) }}">
-
-    {% if config.generate_feed %}
-        <link rel="alternate" type="application/atom+xml" title="RSS" href="{{ get_url(path=config.feed_filename) | safe }}">
-    {% endif %}
-
+    {% if config.generate_feed %}<link rel="alternate" type="application/atom+xml" title="RSS" href="{{ get_url(path=config.feed_filename) | safe }}">{% endif %}
     {% block extra_head %}
     {% endblock extra_head %}
 </head>
