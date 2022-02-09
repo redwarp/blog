@@ -1,0 +1,3 @@
+[workspace]
+members = ["image-filters"]
+resolver = "2"
