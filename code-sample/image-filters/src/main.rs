@@ -1,8 +1,5 @@
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
-    let input_image = image::load_from_memory(include_bytes!("sushi.png"))?.to_rgba8();
-    let (width, height) = input_image.dimensions();
-
     let instance = wgpu::Instance::new(wgpu::Backends::all());
     let adapter = instance
         .request_adapter(&wgpu::RequestAdapterOptionsBase {
@@ -14,6 +11,9 @@ async fn main() -> anyhow::Result<()> {
         .ok_or(anyhow::anyhow!("Couldn't create the adapter"))?;
     let (device, queue) = adapter.request_device(&Default::default(), None).await?;
 
+    let input_image = image::load_from_memory(include_bytes!("sushi.png"))?.to_rgba8();
+    let (width, height) = input_image.dimensions();
+
     let texture_size = wgpu::Extent3d {
         width,
         height,
@@ -21,13 +21,13 @@ async fn main() -> anyhow::Result<()> {
     };
 
     let input_texture = device.create_texture(&wgpu::TextureDescriptor {
+        label: Some("input texture"),
         size: texture_size,
         mip_level_count: 1,
         sample_count: 1,
         dimension: wgpu::TextureDimension::D2,
         format: wgpu::TextureFormat::Rgba8Unorm,
         usage: wgpu::TextureUsages::TEXTURE_BINDING | wgpu::TextureUsages::COPY_DST,
-        label: Some("texture"),
     });
 
     queue.write_texture(
@@ -47,7 +47,7 @@ async fn main() -> anyhow::Result<()> {
     );
 
     let output_texture = device.create_texture(&wgpu::TextureDescriptor {
-        label: None,
+        label: Some("output texture"),
         size: texture_size,
         mip_level_count: 1,
         sample_count: 1,
