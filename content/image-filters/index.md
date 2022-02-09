@@ -13,7 +13,7 @@ This post should give you a few tips about creating a simple image processing pi
 # Getting started
 
 You probably already know this but your GPU, aka your Graphic Processing Unit (So your graphic card if you have one) does not only render graphics, but is also capable of computing regular algorithms. Yup, you can use your GPU to calculate a fibonacci sequence.
-But one of the things that your GPU excel at is parallel computation, as they are optimized to paralellize rendering multiples pixels at once when rendering.
+But one of the things that your GPU excel at is parallel computation, as they are optimized to parallelize rendering multiples pixels at once when rendering.
 
 Accessing the power of the graphic cards for computing used to be fairly complex: 
 * Nvidia (as always) has their own proprietary library CUDA.
@@ -83,7 +83,7 @@ let (device, queue) = adapter.request_device(&Default::default(), None).await?;
 
 This is fairly standard:
 * you create your instance, requesting any backend. You could instead specify the one of your choice, like `wgpu::Backends::VULKAN`.
-* when creating your adapter, you can specify your power preferences. Here, I ask for `HighPerformance`, but you could also choose `LowPerformance` or `Default::default()` (which fallsback to `LowPerformance`).
+* when creating your adapter, you can specify your power preferences. Here, I ask for `HighPerformance`, but you could also choose `LowPerformance` or `Default::default()` (which fallbacks to `LowPerformance`).
 * you then create your device and queue, and they will come handy later for every operations.
 
 You can see some `await` calls, as well as a few `?` . It works here because the definition of the main functions is like so:
@@ -139,7 +139,7 @@ queue.write_texture(
         origin: wgpu::Origin3d::ZERO,
         aspect: wgpu::TextureAspect::All,
     },
-    bytemuck::cast_slice(&input_image.as_raw()),
+    bytemuck::cast_slice(input_image.as_raw()),
     wgpu::ImageDataLayout {
         offset: 0,
         bytes_per_row: std::num::NonZeroU32::new(4 * width),
@@ -247,3 +247,133 @@ let pipeline = device.create_compute_pipeline(&wgpu::ComputePipelineDescriptor {
     entry_point: "main",
 });
 ```
+
+Our shader is loaded as text, and we include it in our codebase for simplicity. We then proceed to create the compute pipeline.
+
+## Bind group
+
+We then proceed to creating our bind group: it is the rust representation of the data that will be attached to the gpu:
+In the shader, we annotated our input_texture with `[[group(0), binding(0)]]` . We must now tell our rust code what this corresponds too.
+
+```rust
+let texture_bind_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
+        label: Some("Texture bind group"),
+        layout: &pipeline.get_bind_group_layout(0),
+        entries: &[
+            wgpu::BindGroupEntry {
+                binding: 0,
+                resource: wgpu::BindingResource::TextureView(
+                    &input_texture.create_view(&wgpu::TextureViewDescriptor::default()),
+                ),
+            },
+            wgpu::BindGroupEntry {
+                binding: 1,
+                resource: wgpu::BindingResource::TextureView(
+                    &output_texture.create_view(&wgpu::TextureViewDescriptor::default()),
+                ),
+            },
+        ],
+    });
+```
+
+In this example, we bind two textures, but we could also bind data buffers or a texture sampler if we wanted. For the group 0, we match our `input_texture` to the binding 0, and our `output_texture` to the binding 1, just like in the shader!
+
+> `pipeline.get_bind_group_layout(0)` automatically creates a bind group layout for us, based on the shader. Alternatively, we could create the bind group layout by hand instead, to be even more specific.
+
+## Workgroup and dispatch
+
+### Workgroup ?
+
+Didn't I tell you that we would speak about workgroup?
+
+According to [the wgsl spec](https://www.w3.org/TR/WGSL/#compute-shader-workgroups), "a workgroup is a set of invocations which concurrently execute a compute shader stage entry point, and share access to shader variables in the workgroup address space."
+
+In our shader, we specified a workgroup of dimension 16 by 16. It can be seen as 2D matrix of instructions executed at once. In our case, 16 by 16 equals 256. Our shader will process when running 256 pixels at once! Take that, sequential computing!
+
+Of course, our image is a bit bigger than 16x16, so we need to call this compute shader multiple times to handle every single pixels.
+
+How many times exactly? Well, we simply divide the width and height of our image by the workgroup dimensions, and it will tell us how many times we need to run this 16x16 matrix to cover everything. We also make sure that to cover every pixels.
+
+Let's have a simple helper method for that:
+
+```rust
+fn compute_work_group_count(
+    (width, height): (u32, u32),
+    (workgroup_width, workgroup_height): (u32, u32),
+) -> (u32, u32) {
+    let width = (width + workgroup_width - 1) / workgroup_width;
+    let height = (height + workgroup_height - 1) / workgroup_height;
+
+    (width, height)
+}
+```
+
+This method makes sure that there will be enough workgroup to cover each pixels. 
+
+> If we had a width of 20 pixels, and workgroup width of 16, we would be missing 4 pixels by only calling our shader once. We would need to call our shader 2 times, and it would then be able to cover 32 pixels in width. It's a bit of a waste, as some work will go to waste, but it's better than not applying our filters to some pixels.
+
+### Dispatching
+
+```rust
+let mut encoder =
+    device.create_command_encoder(&wgpu::CommandEncoderDescriptor { label: None });
+{
+    let (dispatch_with, dispatch_height) =
+        compute_work_group_count((texture_size.width, texture_size.height), (16, 16));
+    let mut compute_pass = encoder.begin_compute_pass(&wgpu::ComputePassDescriptor {
+        label: Some("Grayscale pass"),
+    });
+    compute_pass.set_pipeline(&pipeline);
+    compute_pass.set_bind_group(0, &texture_bind_group, &[]);
+    compute_pass.dispatch(dispatch_with, dispatch_height, 1);
+}
+
+queue.submit(Some(encoder.finish()));
+```
+
+And now we create our compute pass, set our pipeline, bind our textures, and dispatch!
+
+Dispatching tells `wgpu` how many invocation of the shader, or how many workgroups, must be created in each dimension. As you can see, there is a third argument, that we set to 1: workgroup can also be defined in three dimensions! But we are working on 2d textures, so we won't use it.
+
+> For a picture of 32x32 pixels, we would need to dispatch 4 workgroups: 2 in the `x` dimensions, and 2 in the `y` dimensions.
+
+### Global Invocation Id
+
+So how do we go from workgroup to pixel position?
+Simple: we used in the shader the `global_invocation_id` built-in variable! The `global_invocation_id` gives us the coordinate triple for the current invocation's corresponding compute shader grid point. Hum, I feel that is not helping so much. Let's just say that it multiplies the current workgroup identifier (our dispatch action create several workgroup, and gives to each of them a `x` and a `y` ) with the workgroup size, and add to it the `local_invocation_id` , meaning the coordinates of the current invocation within it's workgroup.
+
+> Let's start again with our 32x32 image. 4 workgroup will be created, with ids (0, 0), (0, 1), (1, 0), (1, 1).
+>  
+> When the workgroup (1, 0) is running, 256 invocation will be running in parallel, with their own local identifier within the group: (0, 1), ... (0, 15), (1, 0) ... (7, 8) ... (15, 15).
+>
+> If we take the invocation (7, 8) of the workgroup (0, 1), it's global invocation id will be (0 * 16 + 7, 1 * 16 + 8), meaning (7, 24).
+>  
+> And that looks a lot like coordinates.
+
+## Output
+
+After all this work, you have it! The gray sushi!
+
+![Gray sushi](sushi-grayscale.png)
+
+# Final thoughts
+
+So, is it worth it?
+
+You tell me! For this example in particular, definitely not! Iterating over an array of pixels, running a O(n) algorithm to change the color to gray... a CPU will do such a great job there that it is not worth the hassle of all that code.
+
+But it was a fun thing to do!
+
+# A few links
+
+First of, if you want to build it and run it yourself, you will find the code here:
+* [code-sample/image-filters](https://github.com/redwarp/blog/tree/main/code-sample/image-filters)
+
+I made a few other filters for fun, including a slightly more involved gaussian blur:
+* [redwarp/filters](https://github.com/redwarp/filters)
+
+Several useful links:
+* [wgpu-rs](https://wgpu.rs/) - homepage to the `wgpu-rs` project.
+* [Get started with GPU Compute on the web](https://web.dev/gpu-compute/#compute-shader-code) - it helped and inspired me to write this article.
+* [The sushi picture, by gnokii](https://openclipart.org/detail/132169/sushi) - royalty free sushi.
+* [WGSL Spec](https://www.w3.org/TR/WGSL) - read the doc, it helps!

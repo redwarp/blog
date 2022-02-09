@@ -37,7 +37,7 @@ async fn main() -> anyhow::Result<()> {
             origin: wgpu::Origin3d::ZERO,
             aspect: wgpu::TextureAspect::All,
         },
-        bytemuck::cast_slice(&input_image.as_raw()),
+        bytemuck::cast_slice(input_image.as_raw()),
         wgpu::ImageDataLayout {
             offset: 0,
             bytes_per_row: std::num::NonZeroU32::new(4 * width),
