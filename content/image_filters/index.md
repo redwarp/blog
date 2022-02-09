@@ -8,6 +8,8 @@ categories = ["rust", "wgpu", "tutorial"]
 
 This post should give you a few tips about creating a simple image processing pipeline with GPU computation, using `wgpu-rs` and `rust` .
 
+<!-- more -->
+
 # Getting started
 
 You probably already know this but your GPU, aka your Graphic Processing Unit (So your graphic card if you have one) does not only render graphics, but is also capable of computing regular algorithms. Yup, you can use your GPU to calculate a fibonacci sequence.
