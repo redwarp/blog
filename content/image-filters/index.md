@@ -12,25 +12,31 @@ This post should give you a few tips about creating a simple image processing pi
 
 # Getting started
 
-You probably already know this but your GPU, aka your Graphic Processing Unit (So your graphic card if you have one) does not only render graphics, but is also capable of computing regular algorithms. Yup, you can use your GPU to calculate a fibonacci sequence.
-But one of the things that your GPU excel at is parallel computation, as they are optimized to parallelize rendering multiples pixels at once when rendering.
+You probably already know this but your GPU (aka your Graphic Processing Unit - your graphic card if you have one) does not only render graphics, but is also capable of computing regular algorithms. Yup, you can use your GPU to calculate a fibonacci sequence if that is your fancy.
+One of the things that your GPU excel at is parallel computation, as they are optimized to render multiples pixels at once.
 
 Accessing the power of the graphic cards for computing used to be fairly complex: 
 * Nvidia (as always) has their own proprietary library CUDA.
-* OpenCl is an open source and free parallel programming library made by the Khronos group (also responsible for OpenGl and Vulkan).
+* OpenCl is an open source and free parallel programming library made by the Khronos group (also responsible for OpenGl and Vulkan, all the cool stuff).
 
-Nowadays, each rendering library has their own solution as well, and you can do gpu computation using 
-* Metal on Apple
-* DirectX 11+ on Windows
+Nowadays, each rendering api has their own solution as well, and you can do gpu computation using 
+* Metal on Apple.
+* DirectX 11+ on Windows.
 * Vulkan everywhere.
 
-And guess what? In the `rust` ecosystem, `wgpu-rs` is a great library that will abstract these different backends, and allow you to write portable GPU computation code that will run everywhere (I hope, I'm currently only trying the code on a Windows machine).
+In the `rust` ecosystem, `wgpu-rs` is a great library that will abstract these different backends, and allow you to write portable GPU computation code that will run everywhere (I hope, I'm currently only trying the code on a Windows machine).
 
 **Who is the target of these article?**
 
-GPU programmer beginners like me with some decent notion of `rust` who like the idea of using their GPU for something else than graphics, but are still tinkering and wondering what they are doing at every step of the way.
+Beginners in GPU programming like me with some notion of `rust` , who like the idea of using their GPU for something else than graphics, but are mostly tinkering and wondering what they are doing at every step of the way.
 
 # Writing a simple grayscale filter
+
+The plan is simple:
+* Take a sample image.
+* Load it to the graphic card as a texture.
+* Apply a compute shader to calculate a grayscale version of it.
+* Retrieve the resulting image and save it to disk.
 
 ## A few dependencies…
 
