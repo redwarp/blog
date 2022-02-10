@@ -6,7 +6,7 @@ date = "2022-02-09"
 categories = ["rust", "wgpu", "tutorial"]
 +++
 
-This post should give you a few tips about creating a simple image processing pipeline with GPU computation, using `wgpu-rs` and `rust` .
+This post should give you a few tips about creating a simple image processing pipeline with compute shaders, using `wgpu-rs` and `rust` .
 
 <!-- more -->
 
