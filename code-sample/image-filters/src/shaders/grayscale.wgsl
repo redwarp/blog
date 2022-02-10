@@ -2,7 +2,7 @@
 [[group(0), binding(1)]] var output_texture : texture_storage_2d<rgba8unorm, write>;
 
 [[stage(compute), workgroup_size(16, 16)]]
-fn main(
+fn grayscale_main(
   [[builtin(global_invocation_id)]] global_id : vec3<u32>,
 ) {
     let dimensions = textureDimensions(input_texture);

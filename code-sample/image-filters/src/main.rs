@@ -11,6 +11,8 @@ async fn main() -> anyhow::Result<()> {
         .ok_or(anyhow::anyhow!("Couldn't create the adapter"))?;
     let (device, queue) = adapter.request_device(&Default::default(), None).await?;
 
+    // Load the image
+
     let input_image = image::load_from_memory(include_bytes!("sushi.png"))?.to_rgba8();
     let (width, height) = input_image.dimensions();
 
@@ -46,6 +48,8 @@ async fn main() -> anyhow::Result<()> {
         texture_size,
     );
 
+    // Create an output texture
+
     let output_texture = device.create_texture(&wgpu::TextureDescriptor {
         label: Some("output texture"),
         size: texture_size,
@@ -58,6 +62,8 @@ async fn main() -> anyhow::Result<()> {
             | wgpu::TextureUsages::STORAGE_BINDING,
     });
 
+    // Create the compute pipeline and bindings
+
     let shader = device.create_shader_module(&wgpu::ShaderModuleDescriptor {
         label: Some("Grayscale shader"),
         source: wgpu::ShaderSource::Wgsl(include_str!("shaders/grayscale.wgsl").into()),
@@ -67,7 +73,7 @@ async fn main() -> anyhow::Result<()> {
         label: Some("Grayscale pipeline"),
         layout: None,
         module: &shader,
-        entry_point: "main",
+        entry_point: "grayscale_main",
     });
 
     let texture_bind_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
@@ -89,8 +95,11 @@ async fn main() -> anyhow::Result<()> {
         ],
     });
 
+    // Dispatch
+
     let mut encoder =
         device.create_command_encoder(&wgpu::CommandEncoderDescriptor { label: None });
+
     {
         let (dispatch_with, dispatch_height) =
             compute_work_group_count((texture_size.width, texture_size.height), (16, 16));
@@ -102,17 +111,7 @@ async fn main() -> anyhow::Result<()> {
         compute_pass.dispatch(dispatch_with, dispatch_height, 1);
     }
 
-    queue.submit(Some(encoder.finish()));
-
     // Get the result.
-
-    let mut encoder =
-        device.create_command_encoder(&wgpu::CommandEncoderDescriptor { label: None });
-    let texture_size = wgpu::Extent3d {
-        width,
-        height,
-        depth_or_array_layers: 1,
-    };
 
     let padded_bytes_per_row = padded_bytes_per_row(width);
     let unpadded_bytes_per_row = width as usize * 4;
@@ -156,9 +155,9 @@ async fn main() -> anyhow::Result<()> {
     let mut pixels: Vec<u8> = vec![0; unpadded_bytes_per_row * height as usize];
     for (padded, pixels) in padded_data
         .chunks_exact(padded_bytes_per_row)
-        .zip(pixels.chunks_exact_mut(unpadded_bytes_per_row as usize))
+        .zip(pixels.chunks_exact_mut(unpadded_bytes_per_row))
     {
-        pixels.copy_from_slice(bytemuck::cast_slice(&padded[..unpadded_bytes_per_row]));
+        pixels.copy_from_slice(&padded[..unpadded_bytes_per_row]);
     }
 
     if let Some(output_image) =
@@ -183,13 +182,13 @@ fn compute_work_group_count(
     (width, height): (u32, u32),
     (workgroup_width, workgroup_height): (u32, u32),
 ) -> (u32, u32) {
-    let width = (width + workgroup_width - 1) / workgroup_width;
-    let height = (height + workgroup_height - 1) / workgroup_height;
+    let x = (width + workgroup_width - 1) / workgroup_width;
+    let y = (height + workgroup_height - 1) / workgroup_height;
 
-    (width, height)
+    (x, y)
 }
 
-/// Compute the next multiple of 256 for texture retrival padding.
+/// Compute the next multiple of 256 for texture retrieval padding.
 fn padded_bytes_per_row(width: u32) -> usize {
     let bytes_per_row = width as usize * 4;
     let padding = (256 - bytes_per_row % 256) % 256;

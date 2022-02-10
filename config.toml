@@ -4,7 +4,7 @@ base_url = "https://blog.redwarp.app"
 compile_sass = true
 # Whether to build a search index to be used later on by a JavaScript library
 build_search_index = true
-title = "Blog"
+title = "Programming stuff"
 theme = "anpu"
 taxonomies = [{ name = "categories" }, { name = "tags" }]
 generate_feed = true
