@@ -18,7 +18,7 @@ One of the things that your GPU excel at is parallel computation, as they are op
 
 Accessing the power of the graphic cards for computing used to be fairly complex: 
 * Nvidia (as always) has their own proprietary library CUDA.
-* OpenCl is an open source and free parallel programming api made by the Khronos group (also responsible for OpenGl and Vulkan, all the cool stuff).
+* OpenCL is an open source and free parallel programming api made by the Khronos group (also responsible for OpenGL and Vulkan, all the cool stuff).
 * Android implemented their own compute api, RenderScript.
 
 Nowadays, each rendering api has their own solution as well. You can do GPU computation using
