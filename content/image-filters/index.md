@@ -141,8 +141,8 @@ let input_texture = device.create_texture(&wgpu::TextureDescriptor {
 
 * No mipmapping or multi sampling are used here, so we keep `mip_level_count` and `sample_count` to 1.
 * It's usage specifies:
-  + TEXTURE_BINDING: the texture can be bound to a shader for sampling, meaning we will be able to retrieve its pixels in our compute code.
-  + COPY_DST: we can copy data into it. And we need to copy data into it, as the texture is currently empty.
+  + `TEXTURE_BINDING`: the texture can be bound to a shader for sampling, meaning we will be able to retrieve its pixels in our compute code.
+  + `COPY_DST`: we can copy data into it. And we need to copy data into it, as the texture is currently empty.
 * The format is another interesting beast: several formats are supported by `wgpu`. Using `Rgba8Unorm` means that the texture contains 8 bit per channel (aka a byte), in the r, g, b, a order, but that the u8 values from [0 - 255] of each channel will be converted to a float between [0 - 1].
 
 ```rust
@@ -158,7 +158,7 @@ queue.write_texture(
 );
 ```
 
-We copy the image data to the texture, which we can do as we declared the texture usage `wgpu::TextureUsages::COPY_DST` .
+We copy the image data to the texture, which we can do as we declared the texture usage `COPY_DST` .
 
 Every pixel is made of 4 bytes, one per color channel, meaning that `bytes_per_row` is 4 times the width of the image.
 
@@ -179,8 +179,8 @@ let output_texture = device.create_texture(&wgpu::TextureDescriptor {
 ```
 
 It's usage is slightly different:
-* COPY_SRC instead of COPY_DST, as we will copy from it later to retrieve our filtered image.
-* STORAGE_BINDING instead of TEXTURE_BINDING to indicate that it will be bound in a shader as a place to store the computation result.
+* `COPY_SRC` instead of `COPY_DST`, as we will copy from it later to retrieve our filtered image.
+* `STORAGE_BINDING` instead of `TEXTURE_BINDING` to indicate that it will be bound in a shader as a place to store the computation result.
 
 ## Shader time
 
