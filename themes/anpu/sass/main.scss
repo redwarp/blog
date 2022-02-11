@@ -1,11 +1,13 @@
+@import url("https://fonts.googleapis.com/css?family=Roboto&display=swap");
+@import url("https://fonts.googleapis.com/css?family=Roboto+Mono&display=swap");
+@import url("syntax-theme-dark.css") (prefers-color-scheme: dark);
+@import url("syntax-theme-light.css") (prefers-color-scheme: light);
+
 @mixin darkMode {
     @media (prefers-color-scheme: dark) {
         @content;
     }
 }
-
-@import url("https://fonts.googleapis.com/css?family=Roboto&display=swap");
-@import url("https://fonts.googleapis.com/css?family=Roboto+Mono&display=swap");
 
 $text-color: #333;
 $text-color-dark: #d8d8d8;
