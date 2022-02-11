@@ -1,3 +1,13 @@
+$darkMode: true;
+
+@mixin darkMode {
+    @if($darkMode) {
+      @media(prefers-color-scheme: dark) {
+        @content;
+      }
+    }
+  }
+
 @import url('https://fonts.googleapis.com/css?family=Roboto&display=swap');
 @import url('https://fonts.googleapis.com/css?family=Roboto+Mono&display=swap');
 
@@ -18,6 +28,11 @@ body {
     font-size: 18px;
     line-height: 1.5;
     -webkit-font-smoothing: antialiased;
+
+    @include darkMode {
+        background: #232323;
+        color: #ffffff;
+    }
 }
 
 article,
@@ -203,6 +218,10 @@ header nav a {
 
 header a {
     color: #333;
+    
+    @include darkMode {
+        color: #ffffff;
+    }
 }
 
 .site-header {
@@ -241,6 +260,10 @@ article header h1 a {
     border: none;
     text-decoration: none;
     color: #333;
+    
+    @include darkMode {
+        color: #ffffff;
+    }
 }
 
 .article-info {
@@ -352,6 +375,10 @@ article img {
 
 .pagination-item a {
     color: #333333;
+
+    @include darkMode {
+        color: #ffffff;
+    }
 }
 
 .pagination-item a:hover, .pagination-item   a:focus {
