@@ -1,15 +1,12 @@
-#[tokio::main]
-async fn main() -> anyhow::Result<()> {
+fn main() -> anyhow::Result<()> {
     let instance = wgpu::Instance::new(wgpu::Backends::all());
-    let adapter = instance
-        .request_adapter(&wgpu::RequestAdapterOptionsBase {
-            power_preference: wgpu::PowerPreference::HighPerformance,
-            force_fallback_adapter: false,
-            compatible_surface: None,
-        })
-        .await
-        .ok_or(anyhow::anyhow!("Couldn't create the adapter"))?;
-    let (device, queue) = adapter.request_device(&Default::default(), None).await?;
+    let adapter = pollster::block_on(instance.request_adapter(&wgpu::RequestAdapterOptionsBase {
+        power_preference: wgpu::PowerPreference::HighPerformance,
+        force_fallback_adapter: false,
+        compatible_surface: None,
+    }))
+    .ok_or(anyhow::anyhow!("Couldn't create the adapter"))?;
+    let (device, queue) = pollster::block_on(adapter.request_device(&Default::default(), None))?;
 
     // Load the image
 
@@ -33,17 +30,12 @@ async fn main() -> anyhow::Result<()> {
     });
 
     queue.write_texture(
-        wgpu::ImageCopyTexture {
-            texture: &input_texture,
-            mip_level: 0,
-            origin: wgpu::Origin3d::ZERO,
-            aspect: wgpu::TextureAspect::All,
-        },
+        input_texture.as_image_copy(),
         bytemuck::cast_slice(input_image.as_raw()),
         wgpu::ImageDataLayout {
             offset: 0,
             bytes_per_row: std::num::NonZeroU32::new(4 * width),
-            rows_per_image: std::num::NonZeroU32::new(height),
+            rows_per_image: None, // Doesn't need to be specified as we are writing a single image.
         },
         texture_size,
     );
@@ -57,9 +49,7 @@ async fn main() -> anyhow::Result<()> {
         sample_count: 1,
         dimension: wgpu::TextureDimension::D2,
         format: wgpu::TextureFormat::Rgba8Unorm,
-        usage: wgpu::TextureUsages::TEXTURE_BINDING
-            | wgpu::TextureUsages::COPY_SRC
-            | wgpu::TextureUsages::STORAGE_BINDING,
+        usage: wgpu::TextureUsages::COPY_SRC | wgpu::TextureUsages::STORAGE_BINDING,
     });
 
     // Create the compute pipeline and bindings
@@ -148,7 +138,7 @@ async fn main() -> anyhow::Result<()> {
     let mapping = buffer_slice.map_async(wgpu::MapMode::Read);
 
     device.poll(wgpu::Maintain::Wait);
-    mapping.await?;
+    pollster::block_on(mapping)?;
 
     let padded_data = buffer_slice.get_mapped_range();
 

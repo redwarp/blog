@@ -61,7 +61,7 @@ edition = "2021"
 anyhow = "1.0"
 bytemuck = "1.7"
 image = "0.24"
-tokio = { version = "1.16", features = ["full"] }
+pollster = "0.2"
 wgpu = "0.12"
 ```
 
@@ -70,23 +70,29 @@ So, what are those?
 * `image` will allow us to load a png file, decode it, and read it as a stream of bytes.
 * `bytemuck` is a utility crate used for casting between plain data types.
 * `anyhow` is here so we can rethrow most results as this is just sample code.
-* `tokio` is used here as several function from `wgpu` are async, and making our `main` function async as well simplifies the code here. 
+* `pollster` is used here as several function in `wgpu` are async. `pollster` allows us to block our code until the `async` method finish.
 
 ## Wgpu basics
 
-Let's get started in the `main` method by creating the device and the queue.
+Let's get started in the `main` method.
+
+```rust
+fn main() -> anyhow::Result<()> {
+```
+
+We return an `anyhow::Result` so we can propagate errors up for simplicity.
+
+We then create the device and the queue.
 
 ```rust
 let instance = wgpu::Instance::new(wgpu::Backends::all());
-let adapter = instance
-    .request_adapter(&wgpu::RequestAdapterOptionsBase {
-        power_preference: wgpu::PowerPreference::HighPerformance,
-        force_fallback_adapter: false,
-        compatible_surface: None,
-    })
-    .await
-    .ok_or(anyhow::anyhow!("Couldn't create the adapter"))?;
-let (device, queue) = adapter.request_device(&Default::default(), None).await?;
+let adapter = pollster::block_on(instance.request_adapter(&wgpu::RequestAdapterOptionsBase {
+    power_preference: wgpu::PowerPreference::HighPerformance,
+    force_fallback_adapter: false,
+    compatible_surface: None,
+}))
+.ok_or(anyhow::anyhow!("Couldn't create the adapter"))?;
+let (device, queue) = pollster::block_on(adapter.request_device(&Default::default(), None))?;
 ```
 
 This is fairly standard:
@@ -94,11 +100,10 @@ This is fairly standard:
 * when creating your adapter, you can specify your power preferences. Here, I ask for `HighPerformance`, but you could also choose `LowPerformance`.
 * you then create your device and queue, and they will come handy later for every operations.
 
-You can see some `await` calls, as well as a few `?` . We use `tokio` and `anyhow` to handle async and any error our code could throw at us.
+We use pollster here to block on the `request_device` method, as it is an `async` call.
 
 ```rust
-#[tokio::main]
-async fn main() -> anyhow::Result<()> { ... }
+fn main() -> anyhow::Result<()> { ... }
 ```
 
 ## Loading the texture
@@ -136,23 +141,18 @@ let input_texture = device.create_texture(&wgpu::TextureDescriptor {
 
 * No mipmapping or multi sampling are used here, so we keep `mip_level_count` and `sample_count` to 1.
 * It's usage specifies:
-  + TEXTURE_BINDING: the texture can be used in a binding group (that will come back later), 
+  + TEXTURE_BINDING: the texture can be bound to a shader for sampling, meaning we will be able to retrieve its pixels in our compute code.
   + COPY_DST: we can copy data into it. And we need to copy data into it, as the texture is currently empty.
 * The format is another interesting beast: several formats are supported by `wgpu`. Using `Rgba8Unorm` means that the texture contains 8 bit per channel (aka a byte), in the r, g, b, a order, but that the u8 values from [0 - 255] of each channel will be converted to a float between [0 - 1].
 
 ```rust
 queue.write_texture(
-    wgpu::ImageCopyTexture {
-        texture: &input_texture,
-        mip_level: 0,
-        origin: wgpu::Origin3d::ZERO,
-        aspect: wgpu::TextureAspect::All,
-    },
+    input_texture.as_image_copy(),
     bytemuck::cast_slice(input_image.as_raw()),
     wgpu::ImageDataLayout {
         offset: 0,
         bytes_per_row: std::num::NonZeroU32::new(4 * width),
-        rows_per_image: std::num::NonZeroU32::new(height),
+        rows_per_image: None, // Doesn't need to be specified as we are writing a single image.
     },
     texture_size,
 );
@@ -160,32 +160,27 @@ queue.write_texture(
 
 We copy the image data to the texture, which we can do as we declared the texture usage `wgpu::TextureUsages::COPY_DST` .
 
-Every pixel is made of 4 bites, one per color channel, meaning that `bytes_per_row` is 4 times the width of the image.
+Every pixel is made of 4 bytes, one per color channel, meaning that `bytes_per_row` is 4 times the width of the image.
 
 ## Creating an output texture
 
-We will use an output texture to write the grayscale value of our image.
+We will use an output texture to store the grayscale version of our image.
 
 ```rust
-let output_texture = device.create_texture(&wgpu:: TextureDescriptor {
+let output_texture = device.create_texture(&wgpu::TextureDescriptor {
     label: Some("output texture"),
     size: texture_size,
     mip_level_count: 1,
     sample_count: 1,
     dimension: wgpu::TextureDimension::D2,
     format: wgpu::TextureFormat::Rgba8Unorm,
-    usage: wgpu::TextureUsages::TEXTURE_BINDING
-        | wgpu::TextureUsages::COPY_SRC
-        | wgpu::TextureUsages::STORAGE_BINDING,
-
-}); 
-
+    usage: wgpu::TextureUsages::COPY_SRC | wgpu::TextureUsages::STORAGE_BINDING,
+});
 ```
 
 It's usage is slightly different:
-* TEXTURE_BINDING, as once again we will bind the texture to a shader.
-* COPY_SRC instead of DST, as we will copy from it later to retrieve our filtered image.
-* STORAGE_BINDING, to indicate that it will be used in a shader as a place to store the computation result.
+* COPY_SRC instead of COPY_DST, as we will copy from it later to retrieve our filtered image.
+* STORAGE_BINDING instead of TEXTURE_BINDING to indicate that it will be bound in a shader as a place to store the computation result.
 
 ## Shader time
 
@@ -202,22 +197,22 @@ If you run your program on an Apple computer using the `metal` backend, your sha
 With all that being said, let's take a look at our `wgsl` instructions to convert an image from color to grayscale.
 
 ```wgsl
-[[group(0), binding(0)]] var input_texture : texture_2d<f32>; 
-[[group(0), binding(1)]] var output_texture : texture_storage_2d<rgba8unorm, write>; 
+[[group(0), binding(0)]] var input_texture : texture_2d<f32>;
+[[group(0), binding(1)]] var output_texture : texture_storage_2d<rgba8unorm, write>;
 
 [[stage(compute), workgroup_size(16, 16)]]
 fn grayscale_main(
   [[builtin(global_invocation_id)]] global_id : vec3<u32>,
 ) {
-    let coords = vec2<i32>(global_id.xy);
     let dimensions = textureDimensions(input_texture);
+    let coords = vec2<i32>(global_id.xy);
 
     if(coords.x >= dimensions.x || coords.y >= dimensions.y) {
         return;
     }
 
     let color = textureLoad(input_texture, coords.xy, 0);
-    let gray = 0.299 * color.r + 0.587 * color.g + 0.114 * color.b;
+    let gray = dot(vec3<f32>(0.299, 0.587, 0.114), color.rgb);
 
     textureStore(output_texture, coords.xy, vec4<f32>(gray, gray, gray, color.a));
 }
@@ -259,7 +254,7 @@ let pipeline = device.create_compute_pipeline(&wgpu::ComputePipelineDescriptor {
 });
 ```
 
-Our shader is loaded as text, and we include it in our codebase for simplicity. We specify our entry point, matching the `grayscale_main` function in the shader.
+Our shader is loaded as text. We specify our entry point, matching the `grayscale_main` function in the shader.
 
 ## Bind group
 
@@ -463,7 +458,7 @@ let buffer_slice = output_buffer.slice(..);
 let mapping = buffer_slice.map_async(wgpu::MapMode::Read);
 
 device.poll(wgpu::Maintain::Wait);
-mapping.await?;
+pollster::block_on(mapping)?;
 ```
 
 We need to wait on `poll` , to make sure that the submitted instructions have been completed, and that the data is available in the mapped buffer.
