@@ -1,19 +1,20 @@
 $darkMode: true;
 
 @mixin darkMode {
-    @if($darkMode) {
-      @media(prefers-color-scheme: dark) {
-        @content;
-      }
+    @if ($darkMode) {
+        @media (prefers-color-scheme: dark) {
+            @content;
+        }
     }
-  }
+}
 
-@import url('https://fonts.googleapis.com/css?family=Roboto&display=swap');
-@import url('https://fonts.googleapis.com/css?family=Roboto+Mono&display=swap');
+@import url("https://fonts.googleapis.com/css?family=Roboto&display=swap");
+@import url("https://fonts.googleapis.com/css?family=Roboto+Mono&display=swap");
 
 /* Basic */
 html {
-    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen, Ubuntu, Cantarell, "Open Sans",
+        "Helvetica Neue", sans-serif;
     /* 1 */
     -ms-text-size-adjust: 100%;
     /* 2 */
@@ -49,7 +50,7 @@ nav,
 section,
 summary {
     display: block;
-}	
+}
 
 .container {
     max-width: 42em;
@@ -57,7 +58,7 @@ summary {
 }
 
 main {
-    outline:none;
+    outline: none;
 }
 
 /* Headers */
@@ -88,13 +89,13 @@ a:hover {
 a:hover,
 a:focus {
     color: #a31d1d;
-    border-bottom: 1px solid rgba(163, 29, 29, .5);
+    border-bottom: 1px solid rgba(163, 29, 29, 0.5);
 }
 
 a:active {
     color: #a31d1d;
     opacity: 0.9;
-    border-bottom: 1px solid rgba(163, 29, 29, .5);
+    border-bottom: 1px solid rgba(163, 29, 29, 0.5);
 }
 
 a.active {
@@ -102,23 +103,23 @@ a.active {
 }
 
 a.skip-main {
-    left:-999px;
-    position:absolute;
-    top:auto;
-    width:1px;
-    height:1px;
-    overflow:hidden;
-    z-index:-999;
+    left: -999px;
+    position: absolute;
+    top: auto;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    z-index: -999;
 }
 
-a.skip-main:focus, 
+a.skip-main:focus,
 a.skip-main:active {
     left: auto;
     top: 0px;
     width: auto;
     height: auto;
-    overflow:auto;
-    z-index:999;
+    overflow: auto;
+    z-index: 999;
     padding: 4px 6px 4px 6px;
     text-decoration: underline;
     border: none;
@@ -138,7 +139,8 @@ thead {
     background: lightgrey;
 }
 
-th, td {
+th,
+td {
     padding: 0.5em 1em;
     border: 1px double lightgrey;
 }
@@ -155,7 +157,7 @@ code,
 pre,
 kbd {
     font-family: "Roboto Mono", monospace;
-    font-size: 0.90em;
+    font-size: 0.9em;
     line-height: 154%;
 }
 :not(pre) > code {
@@ -181,7 +183,9 @@ hr {
     border-top: 1px solid #cccccc;
 }
 
-ul ol, ol ol, ul ul {
+ul ol,
+ol ol,
+ul ul {
     margin: 0em 2em;
 }
 
@@ -218,7 +222,7 @@ header nav a {
 
 header a {
     color: #333;
-    
+
     @include darkMode {
         color: #ffffff;
     }
@@ -243,7 +247,6 @@ main h1 {
 
 /* Articles */
 
-
 article:not(:last-of-type) {
     border-bottom: thin solid #f1f1f1;
     padding-bottom: 2em;
@@ -260,7 +263,7 @@ article header h1 a {
     border: none;
     text-decoration: none;
     color: #333;
-    
+
     @include darkMode {
         color: #ffffff;
     }
@@ -320,7 +323,7 @@ article img {
     max-width: 100%;
     display: block;
     height: auto;
-    margin: 0 auto .5em;
+    margin: 0 auto 0.5em;
 }
 
 .read-more {
@@ -361,12 +364,16 @@ article img {
 }
 
 .pagination {
-    text-align: center;   
+    text-align: center;
 }
 
 .pagination-item {
     background: #fafafa;
     padding: 0.75em 0.75em;
+
+    @include darkMode {
+        background: #343434;
+    }
 }
 
 .disabled {
@@ -381,7 +388,8 @@ article img {
     }
 }
 
-.pagination-item a:hover, .pagination-item   a:focus {
+.pagination-item a:hover,
+.pagination-item a:focus {
     color: #a31d1d;
     border-bottom: 0;
 }
@@ -439,6 +447,10 @@ ul.language-select > li {
         text-align: center;
         background: #fafafa;
         padding: 0.5em 0;
+
+        @include darkMode {
+            background: #343434;
+        }
     }
 
     header nav a:first-of-type {
