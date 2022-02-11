@@ -1,6 +1,6 @@
 +++
 title = "Computing image filters with wgpu-rs"
-date = "2022-02-09"
+date = "2022-02-11"
 
 [taxonomies]
 categories = ["rust", "wgpu", "tutorial"]
@@ -80,9 +80,11 @@ Let's get started in the `main` method.
 fn main() -> anyhow::Result<()> {
 ```
 
-We return an `anyhow::Result` so we can propagate errors up for simplicity.
+We return an `anyhow::Result` to simplify error handling.
 
 We then create the device and the queue.
+* The device represent an open connection to your GPU, and we will use it later to create the resources we need (like textures).
+* We will use the queue to issue commands to the GPU.
 
 ```rust
 let instance = wgpu::Instance::new(wgpu::Backends::all());
