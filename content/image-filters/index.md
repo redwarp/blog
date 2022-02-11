@@ -70,7 +70,7 @@ So, what are those?
 * `image` will allow us to load a png file, decode it, and read it as a stream of bytes.
 * `bytemuck` is a utility crate used for casting between plain data types.
 * `anyhow` is here so we can rethrow most results as this is just sample code.
-* `pollster` is used here as several function in `wgpu` are async. `pollster` allows us to block our code until the `async` method finish.
+* `pollster` is used here as several function in `wgpu` are async. `pollster` lets you block a thread until a future completes.
 
 ## Wgpu basics
 
@@ -78,9 +78,13 @@ Let's get started in the `main` method.
 
 ```rust
 fn main() -> anyhow::Result<()> {
+    use pollster::FutureExt;
+
+    (...)
+}
 ```
 
-We return an `anyhow::Result` to simplify error handling.
+We return an `anyhow::Result` to simplify error handling, and declare usage of `pollster::FutureExt` so we can `block_on()` the async calls easily.
 
 We then create the device and the queue.
 * The device represent an open connection to your GPU, and we will use it later to create the resources we need (like textures).
@@ -88,13 +92,17 @@ We then create the device and the queue.
 
 ```rust
 let instance = wgpu::Instance::new(wgpu::Backends::all());
-let adapter = pollster::block_on(instance.request_adapter(&wgpu::RequestAdapterOptionsBase {
-    power_preference: wgpu::PowerPreference::HighPerformance,
-    force_fallback_adapter: false,
-    compatible_surface: None,
-}))
-.ok_or(anyhow::anyhow!("Couldn't create the adapter"))?;
-let (device, queue) = pollster::block_on(adapter.request_device(&Default::default(), None))?;
+let adapter = instance
+    .request_adapter(&wgpu::RequestAdapterOptionsBase {
+        power_preference: wgpu::PowerPreference::HighPerformance,
+        force_fallback_adapter: false,
+        compatible_surface: None,
+    })
+    .block_on()
+    .ok_or(anyhow::anyhow!("Couldn't create the adapter"))?;
+let (device, queue) = adapter
+    .request_device(&Default::default(), None)
+    .block_on()?;
 ```
 
 This is fairly standard:
@@ -102,11 +110,7 @@ This is fairly standard:
 * when creating your adapter, you can specify your power preferences. Here, I ask for `HighPerformance`, but you could also choose `LowPerformance`.
 * you then create your device and queue, and they will come handy later for every operations.
 
-We use pollster here to block on the `request_device` method, as it is an `async` call.
-
-```rust
-fn main() -> anyhow::Result<()> { ... }
-```
+We use pollster here to block on `request_adapter` and `request_device` methods, as they are `async` calls.
 
 ## Loading the texture
 
@@ -460,7 +464,7 @@ let buffer_slice = output_buffer.slice(..);
 let mapping = buffer_slice.map_async(wgpu::MapMode::Read);
 
 device.poll(wgpu::Maintain::Wait);
-pollster::block_on(mapping)?;
+mapping.block_on()?;
 ```
 
 We need to wait on `poll` , to make sure that the submitted instructions have been completed, and that the data is available in the mapped buffer.

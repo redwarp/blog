@@ -1,12 +1,18 @@
 fn main() -> anyhow::Result<()> {
+    use pollster::FutureExt;
+
     let instance = wgpu::Instance::new(wgpu::Backends::all());
-    let adapter = pollster::block_on(instance.request_adapter(&wgpu::RequestAdapterOptionsBase {
-        power_preference: wgpu::PowerPreference::HighPerformance,
-        force_fallback_adapter: false,
-        compatible_surface: None,
-    }))
-    .ok_or(anyhow::anyhow!("Couldn't create the adapter"))?;
-    let (device, queue) = pollster::block_on(adapter.request_device(&Default::default(), None))?;
+    let adapter = instance
+        .request_adapter(&wgpu::RequestAdapterOptionsBase {
+            power_preference: wgpu::PowerPreference::HighPerformance,
+            force_fallback_adapter: false,
+            compatible_surface: None,
+        })
+        .block_on()
+        .ok_or(anyhow::anyhow!("Couldn't create the adapter"))?;
+    let (device, queue) = adapter
+        .request_device(&Default::default(), None)
+        .block_on()?;
 
     // Load the image
 
@@ -138,7 +144,7 @@ fn main() -> anyhow::Result<()> {
     let mapping = buffer_slice.map_async(wgpu::MapMode::Read);
 
     device.poll(wgpu::Maintain::Wait);
-    pollster::block_on(mapping)?;
+    mapping.block_on()?;
 
     let padded_data = buffer_slice.get_mapped_range();
 
