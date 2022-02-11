@@ -1,15 +1,17 @@
-$darkMode: true;
-
 @mixin darkMode {
-    @if ($darkMode) {
-        @media (prefers-color-scheme: dark) {
-            @content;
-        }
+    @media (prefers-color-scheme: dark) {
+        @content;
     }
 }
 
 @import url("https://fonts.googleapis.com/css?family=Roboto&display=swap");
 @import url("https://fonts.googleapis.com/css?family=Roboto+Mono&display=swap");
+
+$text-color: #333;
+$text-color-dark: #d8d8d8;
+$link-active-color: #bf616a;
+$link-color: #1d60a3;
+$link-color-dark: #2987e5;
 
 /* Basic */
 html {
@@ -25,14 +27,14 @@ html {
 body {
     margin: 0;
     background: #ffffff;
-    color: #333;
+    color: $text-color;
     font-size: 18px;
     line-height: 1.5;
     -webkit-font-smoothing: antialiased;
 
     @include darkMode {
         background: #232323;
-        color: #ffffff;
+        color: $text-color-dark;
     }
 }
 
@@ -77,8 +79,12 @@ h3 {
 /* Links */
 
 a {
-    color: #1d60a3;
+    color: $link-color;
     text-decoration: none;
+
+    @include darkMode {
+        color: $link-color-dark;
+    }
 }
 
 a:active,
@@ -88,18 +94,18 @@ a:hover {
 
 a:hover,
 a:focus {
-    color: #a31d1d;
-    border-bottom: 1px solid rgba(163, 29, 29, 0.5);
+    color: $link-active-color;
+    border-bottom: 1px solid $link-active-color;
 }
 
 a:active {
-    color: #a31d1d;
+    color: $link-active-color;
     opacity: 0.9;
-    border-bottom: 1px solid rgba(163, 29, 29, 0.5);
+    border-bottom: 1px solid $link-active-color;
 }
 
 a.active {
-    color: #a31d1d;
+    color: $link-active-color;
 }
 
 a.skip-main {
@@ -221,10 +227,10 @@ header nav a {
 }
 
 header a {
-    color: #333;
+    color: $text-color;
 
     @include darkMode {
-        color: #ffffff;
+        color: $text-color-dark;
     }
 }
 
@@ -262,10 +268,10 @@ article header h1 {
 article header h1 a {
     border: none;
     text-decoration: none;
-    color: #333;
+    color: $text-color;
 
     @include darkMode {
-        color: #ffffff;
+        color: $text-color-dark;
     }
 }
 
@@ -280,7 +286,7 @@ article header h1 a {
 }
 
 .article-info a:hover {
-    color: #a31d1d;
+    color: $link-active-color;
 }
 
 .post-short-list .article-info {
@@ -381,16 +387,16 @@ article img {
 }
 
 .pagination-item a {
-    color: #333333;
+    color: $text-color;
 
     @include darkMode {
-        color: #ffffff;
+        color: $text-color-dark;
     }
 }
 
 .pagination-item a:hover,
 .pagination-item a:focus {
-    color: #a31d1d;
+    color: $link-active-color;
     border-bottom: 0;
 }
 
