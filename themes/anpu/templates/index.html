@@ -47,7 +47,8 @@
         </main>
         <footer>
             <p>
-                © {{ config.title }} {{ now() | date(format="%Y") }}<br>
+                © {{ config.extra.author }} {{ now() | date(format="%Y") }}<br>
+                Powered by <a target="_blank" href="https://getzola.org/">Zola</a>, Theme adapted from <a target="_blank" href="https://github.com/zbrox/anpu-zola-theme">Anpu</a>.
             </p>
             <p>
                 {% block footer %}

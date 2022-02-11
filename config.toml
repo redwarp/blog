@@ -4,7 +4,7 @@ base_url = "https://blog.redwarp.app"
 compile_sass = true
 # Whether to build a search index to be used later on by a JavaScript library
 build_search_index = true
-title = "Programming stuff"
+title = "Code bits"
 theme = "anpu"
 taxonomies = [{ name = "categories" }, { name = "tags" }]
 generate_feed = true
@@ -16,4 +16,6 @@ highlight_code = true
 
 [extra]
 # Put all your custom variables here
+author = "redwarp"
 anpu_date_format = "%e %B %Y"
+anpu_menu_links = [{ url = "$BASE_URL/about/", name = "About" }]
