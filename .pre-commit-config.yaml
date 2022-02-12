@@ -3,3 +3,4 @@ repos:
     rev: v1.1.0
     hooks:
       - id: optimize-png
+        args: [--zopfli]
