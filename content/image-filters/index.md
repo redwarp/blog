@@ -6,7 +6,7 @@ date = "2022-02-11"
 categories = ["rust", "wgpu", "tutorial"]
 +++
 
-This post should give you a few tips about creating a simple image processing pipeline with compute shaders, using `wgpu-rs` and `rust` .
+This post should give you a few tips about creating a simple image processing pipeline with compute shaders, using `wgpu-rs` and `Rust` .
 
 <!-- more -->
 
@@ -26,11 +26,11 @@ Nowadays, each rendering api has their own solution as well. You can do GPU comp
 * DirectX 11+ on Windows.
 * Vulkan everywhere.
 
-In the `rust` ecosystem, `wgpu-rs` is a great library that will abstract these different backends, and allow you to write portable GPU computation code that will run everywhere (hopefully, I'm currently only trying the code on a Windows machine without a mean to really test portability).
+In the `Rust` ecosystem, `wgpu-rs` is a great library that will abstract these different backends, and allow you to write portable GPU computation code that will run everywhere (hopefully, I'm currently only trying the code on a Windows machine without a mean to really test portability).
 
 > **Who is the target of this article?**
 >  
-> Beginners in GPU programming like me with some notion of `rust` , who like the idea of using their GPU for something else than graphics, but are mostly tinkering and wondering what they are doing at every step of the way.
+> Beginners in GPU programming like me with some notion of `Rust` , who like the idea of using their GPU for something else than graphics, but are mostly tinkering and wondering what they are doing at every step of the way.
 
 # Writing a simple grayscale filter
 
@@ -48,7 +48,7 @@ Let's start with creating a new project.
 cargo new image-filters
 ```
 
-As always, this will create a new rust project, including a `Cargo.toml` file and a hello world `main.rs` file.
+As always, this will create a new `Rust` project, including a `Cargo.toml` file and a hello world `main.rs` file.
 Let's edit the `Cargo.toml` file and add all the dependencies we will need.
 
 ```toml
@@ -194,7 +194,7 @@ It's usage is slightly different:
 
 A compute shader is a set of instructions that will be given to your GPU to tell it what calculations are needed.
 
-In the same way that a CPU program can be written in multiple languages (rust, C, C++, ...), a GPU program can be written in multiple languages also (GLSL, HLSL, SIR-V, MSL) that need to be compiled as well.
+In the same way that a CPU program can be written in multiple languages (Rust, C, C++, ...), a GPU program can be written in multiple languages also (GLSL, HLSL, SIR-V, MSL) that need to be compiled as well.
 
 It could be a mess, but `wgpu` uses a universal shader translator, [ `naga` ](https://github.com/gfx-rs/naga) , that allow you to write your shader in `wgsl` or `glsl` , and make sure they are properly converted for each backend.
 
@@ -226,7 +226,7 @@ fn grayscale_main(
 
 Contrarily to the CPU approach, where we would write one piece of code that iterates on every pixel to calculate it's grayscale value, the compute shader will be a piece of code that runs concurrently on each pixel.
 
-We declare two variable, input and output texture, that match the textures we created in `rust` . The output is of the type `texture_storage_2d` , with the same `rgba8unorm` type as before.
+We declare two variable, input and output texture, that match the textures we created in `Rust` . The output is of the type `texture_storage_2d` , with the same `rgba8unorm` type as before.
 
 Our `grayscale_main` function declares a **workgroup size**, but more on that later.
 
@@ -244,7 +244,7 @@ The rest is straightforward:
 
 ### Loading the shader and creating the pipeline
 
-Okay, back to rust!
+Okay, back to Rust!
 
 ```rust
 let shader = device.create_shader_module(&wgpu::ShaderModuleDescriptor {
@@ -264,9 +264,9 @@ Our shader is loaded as text. We specify our entry point, matching the `grayscal
 
 ## Bind group
 
-We then proceed to creating our bind group: it is the rust representation of the data that will be attached to the gpu:
+We then proceed to creating our bind group: it is the Rust representation of the data that will be attached to the gpu:
 
-In the shader, we annotated our input_texture with `[[group(0), binding(0)]]` . We must now tell our `rust` code what it corresponds too.
+In the shader, we annotated our input_texture with `[[group(0), binding(0)]]` . We must now tell our `Rust` code what it corresponds too.
 
 ```rust
 let texture_bind_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
