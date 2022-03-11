@@ -327,7 +327,7 @@ This method makes sure that there will be enough workgroup to cover each pixels.
 
 > If we had a width of 20 pixels and height 16, using the workgroup of dimension 16 by 16, we would be missing a band of 4 pixels by only creating a single workgroup. We would need to create a second workgroup to handle the extra pixels, and we would then be able to cover 32 pixels in width.
 >
-> Some work will go to waste, but its better than not applying our filters to a band of pixels.
+> Some work will go to waste, but it is better than not applying our filters to a band of pixels.
 
 ### Dispatching
 
