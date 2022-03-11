@@ -6,7 +6,7 @@ date = "2022-02-11"
 categories = ["rust", "wgpu", "tutorial"]
 +++
 
-This post should give you a few tips about creating a simple image processing pipeline with compute shaders, using `wgpu-rs` and `Rust` .
+This post describes creating a simple image processing pipeline with compute shaders, using `wgpu-rs` and `Rust` .
 
 <!-- more -->
 
@@ -18,10 +18,10 @@ One of the things that your GPU excel at is parallel computation, as they are op
 
 Accessing the power of the graphic cards for computing used to be fairly complex: 
 * Nvidia (as always) has their own proprietary library CUDA.
-* OpenCL is an open source and free parallel programming api made by the Khronos group (also responsible for OpenGL and Vulkan, all the cool stuff).
-* Android implemented their own compute api, RenderScript.
+* OpenCL is an open source and free parallel programming API made by the Khronos group (also responsible for OpenGL and Vulkan, all the cool stuff).
+* Android implemented their own compute API, RenderScript.
 
-Nowadays, each rendering api has their own solution as well. You can do GPU computation using
+Nowadays, each rendering API has their own solution as well. You can do GPU computation using
 * Metal on Apple.
 * DirectX 11+ on Windows.
 * Vulkan everywhere.
@@ -146,7 +146,7 @@ let input_texture = device.create_texture(&wgpu::TextureDescriptor {
 ```
 
 * No mipmapping or multi sampling are used here, so we keep `mip_level_count` and `sample_count` to 1.
-* It's usage specifies:
+* Its usage specifies:
   + `TEXTURE_BINDING`: the texture can be bound to a shader for sampling, meaning we will be able to retrieve its pixels in our compute code.
   + `COPY_DST`: we can copy data into it. And we need to copy data into it, as the texture is currently empty.
 * The format is another interesting beast: several formats are supported by `wgpu`. Using `Rgba8Unorm` means that the texture contains 8 bit per channel (aka a byte), in the r, g, b, a order, but that the u8 values from [0 - 255] of each channel will be converted to a float between [0 - 1].
@@ -184,7 +184,7 @@ let output_texture = device.create_texture(&wgpu::TextureDescriptor {
 });
 ```
 
-It's usage is slightly different:
+Its usage is slightly different:
 * `COPY_SRC` instead of `COPY_DST`, as we will copy from it later to retrieve our filtered image.
 * `STORAGE_BINDING` instead of `TEXTURE_BINDING` to indicate that it will be bound in a shader as a place to store the computation result.
 
@@ -224,7 +224,7 @@ fn grayscale_main(
 }
 ```
 
-Contrarily to the CPU approach, where we would write one piece of code that iterates on every pixel to calculate it's grayscale value, the compute shader will be a piece of code that runs concurrently on each pixel.
+Contrarily to the CPU approach, where we would write one piece of code that iterates on every pixel to calculate its grayscale value, the compute shader will be a piece of code that runs concurrently on each pixel.
 
 We declare two variable, input and output texture, that match the textures we created in `Rust` . The output is of the type `texture_storage_2d` , with the same `rgba8unorm` type as before.
 
@@ -327,7 +327,7 @@ This method makes sure that there will be enough workgroup to cover each pixels.
 
 > If we had a width of 20 pixels and height 16, using the workgroup of dimension 16 by 16, we would be missing a band of 4 pixels by only creating a single workgroup. We would need to create a second workgroup to handle the extra pixels, and we would then be able to cover 32 pixels in width.
 >
-> Some work will go to waste, but it's better than not applying our filters to a band of pixels.
+> Some work will go to waste, but its better than not applying our filters to a band of pixels.
 
 ### Dispatching
 
@@ -362,13 +362,13 @@ Dispatching tells `wgpu` how many invocation of the shader, or how many workgrou
 ### Global Invocation Id
 
 So how do we go from workgroup to pixel position?
-Simple: we used in the shader the `global_invocation_id` built-in variable! The `global_invocation_id` gives us the coordinate triple for the current invocation's corresponding compute shader grid point. Hum, I feel that is not helping so much. Let's just say that it multiplies the current workgroup identifier (our dispatch action create several workgroup, and gives to each of them a `x` and a `y` ) with the workgroup size, and add to it the `local_invocation_id` , meaning the coordinates of the current invocation within it's workgroup.
+Simple: we used in the shader the `global_invocation_id` built-in variable! The `global_invocation_id` gives us the coordinate triple for the current invocation's corresponding compute shader grid point. Hum, I feel that is not helping so much. Let's just say that it multiplies the current workgroup identifier (our dispatch action create several workgroup, and gives to each of them a `x` and a `y` ) with the workgroup size, and add to it the `local_invocation_id` , meaning the coordinates of the current invocation within its workgroup.
 
 > Let's start again with our 48x32 image. 6 workgroup will be created, with ids (0, 0), (1, 0), (2, 0), (1, 0), (1, 1) and (1, 2)
 >  
 > When the workgroup (1, 0) is running, 256 invocation will be running in parallel, with their own local identifier within the group: (0, 1), ... (0, 15), (1, 0) ... (7, 8) ... (15, 15).
 >
-> If we take the invocation (7, 8) of the workgroup (0, 1), it's global invocation id will be (0 * 16 + 7, 1 * 16 + 8), meaning (7, 24).
+> If we take the invocation (7, 8) of the workgroup (0, 1), its global invocation id will be (0 * 16 + 7, 1 * 16 + 8), meaning (7, 24).
 >  
 > Which gives us the coordinate of the pixel this specific invocation will work on.
 
@@ -376,7 +376,7 @@ Simple: we used in the shader the `global_invocation_id` built-in variable! The 
 
 Fetching our result will be done in three steps:
 * we will copy our texture to a buffer.
-* we will map our buffer, so it's available to the cpu.
+* we will map our buffer, so it's available to the CPU.
 * we will recreate an image from the buffered data.
 
 ### Copying our texture to a buffer
@@ -415,7 +415,7 @@ There is a caveat though: This `bytes_per_row` argument must be a multiply of 25
 
 `COPY_BYTES_PER_ROW_ALIGNMENT` is equal to 256. So we need to calculate a number of bytes per row that is a multiple of 256 and that equal to the closest multiple of 256. Damn.
 
-> Let's take again our 48x32 image. It's width is 48. There is 4 bytes per pixel, so we would want to read 4 x 48 = 192 bytes per row.
+> Let's take again our 48x32 image. Its width is 48. There is 4 bytes per pixel, so we would want to read 4 x 48 = 192 bytes per row.
 >
 > 192 is not a multiple of 256, so we take the next multiple of 256 that fits 192. In this case, well, that is 256. It will be our `padded_bytes_per_row` value.
 
