@@ -1,6 +1,6 @@
 repos:
-  - repo: https://github.com/redwarp/optimize-png-hooks
-    rev: v1.1.0
+  - repo: https://github.com/shssoichiro/oxipng
+    rev: v6.0.1
     hooks:
-      - id: optimize-png
+      - id: oxipng
         args: [--zopfli]
