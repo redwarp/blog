@@ -62,7 +62,7 @@ anyhow = "1.0"
 bytemuck = "1.7"
 image = "0.24"
 pollster = "0.2"
-wgpu = "0.12"
+wgpu = "0.14"
 ```
 
 So, what are those?
