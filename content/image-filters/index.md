@@ -12,12 +12,12 @@ This post describes creating a simple image processing pipeline with compute sha
 
 # Getting started
 
-You probably already know this but your GPU (aka your Graphic Processing Unit - your graphic card if you have one) does not only render graphics, but is also capable of computing regular algorithms. Yup, you can use your GPU to calculate a fibonacci sequence if that is your fancy.
+You probably already know this, but your GPU (aka your Graphic Processing Unit - your graphics card if you have one) does not only render graphics, but is also capable of computing regular algorithms. Yup, you can use your GPU to calculate a fibonacci sequence if that is your fancy.
 
-One of the things that your GPU excel at is parallel computation, as they are optimized to render multiples pixels at once.
+One of the things that your GPU excels at is parallel computation, as they are optimized to render multiple pixels at once.
 
-Accessing the power of the graphic cards for computing used to be fairly complex: 
-* Nvidia (as always) has their own proprietary library CUDA.
+Accessing the power of the graphics cards for computing used to be fairly complex:
+* As usual, Nvidia has its own proprietary library, CUDA.
 * OpenCL is an open source and free parallel programming API made by the Khronos group (also responsible for OpenGL and Vulkan, all the cool stuff).
 * Android implemented their own compute API, RenderScript.
 
@@ -26,21 +26,21 @@ Nowadays, each rendering API has their own solution as well. You can do GPU comp
 * DirectX 11+ on Windows.
 * Vulkan everywhere.
 
-In the `Rust` ecosystem, `wgpu-rs` is a great library that will abstract these different backends, and allow you to write portable GPU computation code that will run everywhere (hopefully, I'm currently only trying the code on a Windows machine without a mean to really test portability).
+In the `Rust` ecosystem, `wgpu-rs` is a great library that will abstract these different backends, and allow you to write portable GPU computation code that will run everywhere (hopefully, I'm currently only trying the code on a Windows machine without a means to really test portability).
 
 > **Who is the target of this article?**
->  
-> Beginners in GPU programming like me with some notion of `Rust` , who like the idea of using their GPU for something else than graphics, but are mostly tinkering and wondering what they are doing at every step of the way.
+>  
+> Beginners in GPU programming like me, with some notion of `Rust` , who like the idea of using their GPU for something else than graphics, but are mostly tinkering and wondering what they are doing every step of the way.
 
-# Writing a simple grayscale filter
+# Creating a basic grayscale filter
 
 The plan is simple:
 * Take a sample image.
-* Load it to the graphic card as a texture.
+* Load it in the graphics card as a texture.
 * Apply a compute shader to calculate a grayscale version of it.
 * Retrieve the resulting image and save it to disk.
 
-## A few dependencies…
+## A couple of dependencies...
 
 Let's start with creating a new project.
 
@@ -78,43 +78,43 @@ Let's get started in the `main` method.
 
 ```rust
 fn main() -> anyhow::Result<()> {
-    use pollster::FutureExt;
+    use pollster::FutureExt;
 
-    (...)
+    (...)
 }
 ```
 
 We return an `anyhow::Result` to simplify error handling, and declare usage of `pollster::FutureExt` so we can `block_on()` the async calls easily.
 
 We then create the device and the queue.
-* The device represent an open connection to your GPU, and we will use it later to create the resources we need (like textures).
+* The device represents an open connection to your GPU, and we will use it later to create the resources we need (like textures).
 * We will use the queue to issue commands to the GPU.
 
 ```rust
 let instance = wgpu::Instance::new(wgpu::Backends::all());
 let adapter = instance
-    .request_adapter(&wgpu::RequestAdapterOptionsBase {
-        power_preference: wgpu::PowerPreference::HighPerformance,
-        force_fallback_adapter: false,
-        compatible_surface: None,
-    })
-    .block_on()
-    .ok_or(anyhow::anyhow!("Couldn't create the adapter"))?;
+    .request_adapter(&wgpu::RequestAdapterOptionsBase {
+        power_preference: wgpu::PowerPreference::HighPerformance,
+        force_fallback_adapter: false,
+        compatible_surface: None,
+    })
+    .block_on()
+    .ok_or(anyhow::anyhow!("Couldn't create the adapter"))?;
 let (device, queue) = adapter
-    .request_device(&Default::default(), None)
-    .block_on()?;
+    .request_device(&Default::default(), None)
+    .block_on()?;
 ```
 
 This is fairly standard:
 * you create your instance, requesting any backend. You could instead specify the one of your choice, like `wgpu::Backends::VULKAN`.
 * when creating your adapter, you can specify your power preferences. Here, I ask for `HighPerformance`, but you could also choose `LowPerformance`.
-* you then create your device and queue, and they will come handy later for every operations.
+* you then create your device and queue, and they will come in handy later for every operation.
 
 We use pollster here to block on `request_adapter` and `request_device` methods, as they are `async` calls.
 
 ## Loading the texture
 
-Here we shall work with a png file and include it as bytes in the source code, for simplicity.
+For simplicity, we shall work with a png file and include it as bytes in the source code.
 
 ```rust
 let input_image = image::load_from_memory(include_bytes!("sushi.png"))?.to_rgba8();
@@ -129,38 +129,38 @@ Using the device, we then create a wgpu texture.
 
 ```rust
 let texture_size = wgpu::Extent3d {
-    width,
-    height,
-    depth_or_array_layers: 1,
+    width,
+    height,
+    depth_or_array_layers: 1,
 };
 
 let input_texture = device.create_texture(&wgpu::TextureDescriptor {
-    label: Some("input texture"),
-    size: texture_size,
-    mip_level_count: 1,
-    sample_count: 1,
-    dimension: wgpu::TextureDimension::D2,
-    format: wgpu::TextureFormat::Rgba8Unorm,
-    usage: wgpu::TextureUsages::TEXTURE_BINDING | wgpu::TextureUsages::COPY_DST,
+    label: Some("input texture"),
+    size: texture_size,
+    mip_level_count: 1,
+    sample_count: 1,
+    dimension: wgpu::TextureDimension::D2,
+    format: wgpu::TextureFormat::Rgba8Unorm,
+    usage: wgpu::TextureUsages::TEXTURE_BINDING | wgpu::TextureUsages::COPY_DST,
 });
 ```
 
 * No mipmapping or multi sampling are used here, so we keep `mip_level_count` and `sample_count` to 1.
 * Its usage specifies:
-  + `TEXTURE_BINDING`: the texture can be bound to a shader for sampling, meaning we will be able to retrieve its pixels in our compute code.
-  + `COPY_DST`: we can copy data into it. And we need to copy data into it, as the texture is currently empty.
+  + `TEXTURE_BINDING` : the texture can be bound to a shader for sampling, meaning we will be able to retrieve its pixels in our compute code.
+  + `COPY_DST` : we can copy data into it. And we need to copy data into it, as the texture is currently empty.
 * The format is another interesting beast: several formats are supported by `wgpu`. Using `Rgba8Unorm` means that the texture contains 8 bit per channel (aka a byte), in the r, g, b, a order, but that the u8 values from [0 - 255] of each channel will be converted to a float between [0 - 1].
 
 ```rust
 queue.write_texture(
-    input_texture.as_image_copy(),
-    bytemuck::cast_slice(input_image.as_raw()),
-    wgpu::ImageDataLayout {
-        offset: 0,
-        bytes_per_row: std::num::NonZeroU32::new(4 * width),
-        rows_per_image: None, // Doesn't need to be specified as we are writing a single image.
-    },
-    texture_size,
+    input_texture.as_image_copy(),
+    bytemuck::cast_slice(input_image.as_raw()),
+    wgpu::ImageDataLayout {
+        offset: 0,
+        bytes_per_row: std::num::NonZeroU32::new(4 * width),
+        rows_per_image: None, // Doesn't need to be specified as we are writing a single image.
+    },
+    texture_size,
 );
 ```
 
@@ -174,13 +174,13 @@ We will use an output texture to store the grayscale version of our image.
 
 ```rust
 let output_texture = device.create_texture(&wgpu::TextureDescriptor {
-    label: Some("output texture"),
-    size: texture_size,
-    mip_level_count: 1,
-    sample_count: 1,
-    dimension: wgpu::TextureDimension::D2,
-    format: wgpu::TextureFormat::Rgba8Unorm,
-    usage: wgpu::TextureUsages::COPY_SRC | wgpu::TextureUsages::STORAGE_BINDING,
+    label: Some("output texture"),
+    size: texture_size,
+    mip_level_count: 1,
+    sample_count: 1,
+    dimension: wgpu::TextureDimension::D2,
+    format: wgpu::TextureFormat::Rgba8Unorm,
+    usage: wgpu::TextureUsages::COPY_SRC | wgpu::TextureUsages::STORAGE_BINDING,
 });
 ```
 
@@ -194,7 +194,7 @@ Its usage is slightly different:
 
 A compute shader is a set of instructions that will be given to your GPU to tell it what calculations are needed.
 
-In the same way that a CPU program can be written in multiple languages (Rust, C, C++, ...), a GPU program can be written in multiple languages also (GLSL, HLSL, SIR-V, MSL) that need to be compiled as well.
+In the same way that a CPU program can be written in multiple languages (Rust, C, C++, ...), a GPU program can be written in multiple languages (GLSL, HLSL, SIR-V, MSL) that need to be compiled as well.
 
 It could be a mess, but `wgpu` uses a universal shader translator, [ `naga` ](https://github.com/gfx-rs/naga) , that allow you to write your shader in `wgsl` or `glsl` , and make sure they are properly converted for each backend.
 
@@ -208,19 +208,19 @@ With all that being said, let's take a look at our `wgsl` instructions to conver
 
 [[stage(compute), workgroup_size(16, 16)]]
 fn grayscale_main(
-  [[builtin(global_invocation_id)]] global_id : vec3<u32>,
+  [[builtin(global_invocation_id)]] global_id : vec3<u32>,
 ) {
-    let dimensions = textureDimensions(input_texture);
-    let coords = vec2<i32>(global_id.xy);
+    let dimensions = textureDimensions(input_texture);
+    let coords = vec2<i32>(global_id.xy);
 
-    if(coords.x >= dimensions.x || coords.y >= dimensions.y) {
-        return;
-    }
+    if(coords.x >= dimensions.x || coords.y >= dimensions.y) {
+        return;
+    }
 
-    let color = textureLoad(input_texture, coords.xy, 0);
-    let gray = dot(vec3<f32>(0.299, 0.587, 0.114), color.rgb);
+    let color = textureLoad(input_texture, coords.xy, 0);
+    let gray = dot(vec3<f32>(0.299, 0.587, 0.114), color.rgb);
 
-    textureStore(output_texture, coords.xy, vec4<f32>(gray, gray, gray, color.a));
+    textureStore(output_texture, coords.xy, vec4<f32>(gray, gray, gray, color.a));
 }
 ```
 
@@ -239,8 +239,8 @@ The rest is straightforward:
 * Write it to the output texture.
 
 > Having chosen the `Rbga8Unorm` format for our textures, the colors are retrieved as a float between 0 and 1, and we don't need to cast them when multiplying the r, g and b values to figure out the grayscale value.
->  
-> If we had chosen instead the `Rbga8Uint` format instead, textureLoad would instead return a color of type `vec<u8>` , keeping the values between 0 and 255, and we would first need to cast them to float, before multipling them and recasting them to unsigned byte before writing down the output.
+>  
+> If we had chosen instead the `Rbga8Uint` format instead, textureLoad would instead return a color of type `vec<u8>` , keeping the values between 0 and 255, and we would first need to cast them to float, before multiplying them and recasting them to unsigned byte before writing down the output.
 
 ### Loading the shader and creating the pipeline
 
@@ -248,15 +248,15 @@ Okay, back to Rust!
 
 ```rust
 let shader = device.create_shader_module(wgpu::ShaderModuleDescriptor {
-    label: Some("Grayscale shader"),
-    source: wgpu::ShaderSource::Wgsl(include_str!("shaders/grayscale.wgsl").into()),
+    label: Some("Grayscale shader"),
+    source: wgpu::ShaderSource::Wgsl(include_str!("shaders/grayscale.wgsl").into()),
 });
 
 let pipeline = device.create_compute_pipeline(&wgpu::ComputePipelineDescriptor {
-    label: Some("Grayscale pipeline"),
-    layout: None,
-    module: &shader,
-    entry_point: "grayscale_main",
+    label: Some("Grayscale pipeline"),
+    layout: None,
+    module: &shader,
+    entry_point: "grayscale_main",
 });
 ```
 
@@ -264,29 +264,29 @@ Our shader is loaded as text. We specify our entry point, matching the `grayscal
 
 ## Bind group
 
-We then proceed to creating our bind group: it is the Rust representation of the data that will be attached to the gpu:
+We then proceed to creating our bind group: it is the Rust representation of the data that will be attached to the GPU:
 
-In the shader, we annotated our input_texture with `[[group(0), binding(0)]]` . We must now tell our `Rust` code what it corresponds too.
+In the shader, we annotated our input_texture with `[[group(0), binding(0)]]` . We must now tell our `Rust` code what it corresponds to.
 
 ```rust
 let texture_bind_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
-        label: Some("Texture bind group"),
-        layout: &pipeline.get_bind_group_layout(0),
-        entries: &[
-            wgpu::BindGroupEntry {
-                binding: 0,
-                resource: wgpu::BindingResource::TextureView(
-                    &input_texture.create_view(&wgpu::TextureViewDescriptor::default()),
-                ),
-            },
-            wgpu::BindGroupEntry {
-                binding: 1,
-                resource: wgpu::BindingResource::TextureView(
-                    &output_texture.create_view(&wgpu::TextureViewDescriptor::default()),
-                ),
-            },
-        ],
-    });
+        label: Some("Texture bind group"),
+        layout: &pipeline.get_bind_group_layout(0),
+        entries: &[
+            wgpu::BindGroupEntry {
+                binding: 0,
+                resource: wgpu::BindingResource::TextureView(
+                    &input_texture.create_view(&wgpu::TextureViewDescriptor::default()),
+                ),
+            },
+            wgpu::BindGroupEntry {
+                binding: 1,
+                resource: wgpu::BindingResource::TextureView(
+                    &output_texture.create_view(&wgpu::TextureViewDescriptor::default()),
+                ),
+            },
+        ],
+    });
 ```
 
 For the group 0, we match our `input_texture` to the binding 0, and our `output_texture` to the binding 1, just like in the shader!
@@ -305,7 +305,7 @@ A workgroup is a set of invocations which concurrently execute a compute shader 
 
 In our shader, we specified a workgroup of dimension 16 by 16. It can be seen as 2D matrix of instructions executed at once. In our case, 16 by 16 equals 256. Our shader will process when running 256 pixels at once! Take that, sequential computing!
 
-Of course, our image is a bit bigger than 16x16, so we need to call this compute shader multiple times to handle every single pixels.
+Of course, our image is a bit bigger than 16x16, so we need to call this compute shader multiple times to handle every single pixel.
 
 How many times exactly? Well, we simply divide the width and height of our image by the workgroup dimensions, and it will tell us how many times we need to run this 16x16 matrix to cover everything.
 
@@ -313,19 +313,19 @@ Let's have a simple helper method for that:
 
 ```rust
 fn compute_work_group_count(
-    (width, height): (u32, u32),
-    (workgroup_width, workgroup_height): (u32, u32),
+    (width, height): (u32, u32),
+    (workgroup_width, workgroup_height): (u32, u32),
 ) -> (u32, u32) {
-    let x = (width + workgroup_width - 1) / workgroup_width;
-    let y = (height + workgroup_height - 1) / workgroup_height;
+    let x = (width + workgroup_width - 1) / workgroup_width;
+    let y = (height + workgroup_height - 1) / workgroup_height;
 
-    (x, y)
+    (x, y)
 }
 ```
 
-This method makes sure that there will be enough workgroup to cover each pixels. 
+This method makes sure that there will be enough workgroup to cover each pixel.
 
-> If we had a width of 20 pixels and height 16, using the workgroup of dimension 16 by 16, we would be missing a band of 4 pixels by only creating a single workgroup. We would need to create a second workgroup to handle the extra pixels, and we would then be able to cover 32 pixels in width.
+> If we had a width of 20 pixels and a height of 16, using the workgroup of dimension 16 by 16, we would be missing a band of 4 pixels by only creating a single workgroup. We would need to create a second workgroup to handle the extra pixels, and we would then be able to cover 32 pixels in width.
 >
 > Some work will go to waste, but it is better than not applying our filters to a band of pixels.
 
@@ -335,25 +335,25 @@ We will need a command encoder to chain our different operations:
 
 ```rust
 let mut encoder =
-    device.create_command_encoder(&wgpu::CommandEncoderDescriptor { label: None });
+    device.create_command_encoder(&wgpu::CommandEncoderDescriptor { label: None });
 ```
 
 And now we create our compute pass, set our pipeline, bind our textures, and dispatch our work to the GPU!
 
 ```rust
 {
-    let (dispatch_with, dispatch_height) =
-        compute_work_group_count((texture_size.width, texture_size.height), (16, 16));
-    let mut compute_pass = encoder.begin_compute_pass(&wgpu::ComputePassDescriptor {
-        label: Some("Grayscale pass"),
-    });
-    compute_pass.set_pipeline(&pipeline);
-    compute_pass.set_bind_group(0, &texture_bind_group, &[]);
-    compute_pass.dispatch_workgroups(dispatch_with, dispatch_height, 1);
+    let (dispatch_with, dispatch_height) =
+        compute_work_group_count((texture_size.width, texture_size.height), (16, 16));
+    let mut compute_pass = encoder.begin_compute_pass(&wgpu::ComputePassDescriptor {
+        label: Some("Grayscale pass"),
+    });
+    compute_pass.set_pipeline(&pipeline);
+    compute_pass.set_bind_group(0, &texture_bind_group, &[]);
+    compute_pass.dispatch_workgroups(dispatch_with, dispatch_height, 1);
 }
 ```
 
-Dispatching tells `wgpu` how many invocation of the shader, or how many workgroups, must be created in each dimension. 
+Dispatching tells `wgpu` how many invocations of the shader, or how many workgroups, must be created in each dimension.
 
 > For a picture of 48x32 pixels, we would need to dispatch 6 workgroups: 3 in the `x` dimensions times 2 in the `y` dimensions.
 
@@ -362,19 +362,19 @@ Dispatching tells `wgpu` how many invocation of the shader, or how many workgrou
 ### Global Invocation Id
 
 So how do we go from workgroup to pixel position?
-Simple: we used in the shader the `global_invocation_id` built-in variable! The `global_invocation_id` gives us the coordinate triple for the current invocation's corresponding compute shader grid point. Hum, I feel that is not helping so much. Let's just say that it multiplies the current workgroup identifier (our dispatch action create several workgroup, and gives to each of them a `x` and a `y` ) with the workgroup size, and add to it the `local_invocation_id` , meaning the coordinates of the current invocation within its workgroup.
+Simple: we used in the shader the `global_invocation_id` built-in variable! The `global_invocation_id` gives us the coordinate triple for the current invocation's corresponding compute shader grid point. Hum, I feel that is not helping so much. Let's just say that it multiplies the current workgroup identifier (our dispatch action creates several workgroup, and gives to each of them a `x` and a `y` ) with the workgroup size, and add to it the `local_invocation_id` , meaning the coordinates of the current invocation within its workgroup.
 
 > Let's start again with our 48x32 image. 6 workgroup will be created, with ids (0, 0), (1, 0), (2, 0), (1, 0), (1, 1) and (1, 2)
->  
-> When the workgroup (1, 0) is running, 256 invocation will be running in parallel, with their own local identifier within the group: (0, 1), ... (0, 15), (1, 0) ... (7, 8) ... (15, 15).
+>  
+> When the workgroup (1, 0) is running, 256 invocations will be running in parallel, with their own local identifier within the group: (0, 1), ... (0, 15), (1, 0) ... (7, 8) ... (15, 15).
 >
 > If we take the invocation (7, 8) of the workgroup (0, 1), its global invocation id will be (0 * 16 + 7, 1 * 16 + 8), meaning (7, 24).
->  
+>  
 > Which gives us the coordinate of the pixel this specific invocation will work on.
 
 ## Fetching our result
 
-Fetching our result will be done in three steps:
+Fetching our results will be done in three steps:
 * we will copy our texture to a buffer.
 * we will map our buffer, so it's available to the CPU.
 * we will recreate an image from the buffered data.
@@ -383,39 +383,39 @@ Fetching our result will be done in three steps:
 
 ```rust
 encoder.copy_texture_to_buffer(
-    wgpu::ImageCopyTexture {
-        aspect: wgpu::TextureAspect::All,
-        texture: &output_texture,
-        mip_level: 0,
-        origin: wgpu::Origin3d::ZERO,
-    },
-    wgpu::ImageCopyBuffer {
-        buffer: &output_buffer,
-        layout: wgpu::ImageDataLayout {
-            offset: 0,
-            bytes_per_row: std::num::NonZeroU32::new(padded_bytes_per_row as u32),
-            rows_per_image: std::num::NonZeroU32::new(height),
-        },
-    },
-    texture_size,
+    wgpu::ImageCopyTexture {
+        aspect: wgpu::TextureAspect::All,
+        texture: &output_texture,
+        mip_level: 0,
+        origin: wgpu::Origin3d::ZERO,
+    },
+    wgpu::ImageCopyBuffer {
+        buffer: &output_buffer,
+        layout: wgpu::ImageDataLayout {
+            offset: 0,
+            bytes_per_row: std::num::NonZeroU32::new(padded_bytes_per_row as u32),
+            rows_per_image: std::num::NonZeroU32::new(height),
+        },
+    },
+    texture_size,
 );
 ```
 
-Wait what? What is this `padded_bytes_per_row` ? Where does that comes from?
+Wait what? What is this `padded_bytes_per_row` ? Where does that come from?
 
 I guess we need to speak about **padding**.
 
-Similarly to the method we used to copy our image to a texture, we must here specify the amount of bytes we copy per line (or row) of our texture.
+Similarly to the method we used to copy our image to a texture, we must here specify the number of bytes we copy per line (or row) of our texture.
 
-There is a caveat though: This `bytes_per_row` argument must be a multiply of 256, or the function will panic.
+There is a caveat though: This `bytes_per_row` argument must be a multiple of 256, or the function will panic.
 
 > Reading the doc for this method states:
 >
 > /// # Panics - `source.layout.bytes_per_row` isn't divisible by [ `COPY_BYTES_PER_ROW_ALIGNMENT` ].
 
-`COPY_BYTES_PER_ROW_ALIGNMENT` is equal to 256. So we need to calculate a number of bytes per row that is a multiple of 256 and that equal to the closest multiple of 256. Damn.
+`COPY_BYTES_PER_ROW_ALIGNMENT` is equal to 256. So we need to calculate a number of bytes per row that is a multiple of 256 and that is equal to the closest multiple of 256. Damn.
 
-> Let's take again our 48x32 image. Its width is 48. There is 4 bytes per pixel, so we would want to read 4 x 48 = 192 bytes per row.
+> Let's take our 48x32 image again. Its width is 48. There are 4 bytes per pixel, so we would want to read 4 x 48 = 192 bytes per row.
 >
 > 192 is not a multiple of 256, so we take the next multiple of 256 that fits 192. In this case, well, that is 256. It will be our `padded_bytes_per_row` value.
 
@@ -424,13 +424,13 @@ Let's write a helper method to calculate that.
 ```rust
 /// Compute the next multiple of 256 for texture retrieval padding.
 fn padded_bytes_per_row(width: u32) -> usize {
-    let bytes_per_row = width as usize * 4;
-    let padding = (256 - bytes_per_row % 256) % 256;
-    bytes_per_row + padding
+    let bytes_per_row = width as usize * 4;
+    let padding = (256 - bytes_per_row % 256) % 256;
+    bytes_per_row + padding
 }
 ```
 
-Let's set `padded_bytes_per_row` and `unpadded_bytes_per_row` (we will need it too)
+Let's set `padded_bytes_per_row` and `unpadded_bytes_per_row` (we will need it too).
 
 ```rust
 let padded_bytes_per_row = padded_bytes_per_row(width);
@@ -445,7 +445,7 @@ encoder.copy_texture_to_buffer(...)
 
 ### Time to submit work!
 
-Up until now, we have been declaring to wgpu the work we want to be done, and we added all of our compute commands to the encoder. But nothing has happened yet!
+Up until now, we have been declaring to wgpu the work we want to be done, and we have added all of our compute commands to the encoder. But nothing has happened yet!
 
 Time to queue all of that work.
 
@@ -466,8 +466,8 @@ buffer_slice.map_async(wgpu::MapMode::Read, |_| {});
 device.poll(wgpu::Maintain::Wait);
 ```
 
-We need to wait on `poll` , to make sure that the submitted instructions have been completed, and that the data is available in the mapped buffer.
-`map_async` takes a callback, that probably should be used in real production code to check for error. For this article, I'll just ignore it (bad, bad, bad).
+We need to wait on `poll` , to make sure that the submitted instructions have been completed and that the data is available in the mapped buffer.
+`map_async` takes a callback, which probably should be used in real production code to check for errors. For this article, I'll just ignore it (bad, bad, bad).
 
 We can then access the data:
 
@@ -480,10 +480,10 @@ At this point, we have a slice of data that is padded to 256, and we need to con
 ```rust
 let mut pixels: Vec<u8> = vec![0; unpadded_bytes_per_row * height as usize];
 for (padded, pixels) in padded_data
-    .chunks_exact(padded_bytes_per_row)
-    .zip(pixels.chunks_exact_mut(unpadded_bytes_per_row))
+    .chunks_exact(padded_bytes_per_row)
+    .zip(pixels.chunks_exact_mut(unpadded_bytes_per_row))
 {
-    pixels.copy_from_slice(&padded[..unpadded_bytes_per_row]);
+    pixels.copy_from_slice(&padded[..unpadded_bytes_per_row]);
 }
 ```
 
@@ -494,7 +494,7 @@ Finally, let's save!
 ```rust
 if let Some(output_image) = image::ImageBuffer::<image::Rgba<u8>, _>::from_raw(width, height, &pixels[..])
 {
-    output_image.save("sushi-grayscale.png")?;
+    output_image.save("sushi-grayscale.png")?;
 }
 ```
 
@@ -510,7 +510,7 @@ After all this work, you have it! The gray sushi!
 
 So, is it worth it?
 
-You tell me! For this example in particular, definitely not! Iterating over an array of pixels, running a O(n) algorithm to change the color to gray... a CPU will do such a great job there that it is not worth the hassle of all that code.
+You tell me! For this example in particular, definitely not! Iterating over an array of pixels, running an O(n) algorithm to change the color to gray... a CPU will do such a good job that it is not worth the trouble of writing all that code.
 
 But it was a fun thing to do!
 
@@ -520,14 +520,14 @@ If you wanted to load an image that was bigger than that, (like, if your camera 
 
 # A few links
 
-First of, if you want to build it and run it yourself, you will find the code here:
+First of all, if you want to build it and run it yourself, you will find the code here:
 * [code-sample/image-filters](https://github.com/redwarp/blog/tree/main/code-sample/image-filters)
 
 I made a few other filters for fun, including a slightly more involved gaussian blur:
 * [redwarp/filters](https://github.com/redwarp/filters)
 
 Several useful links:
-* [wgpu-rs](https://wgpu.rs/) - homepage to the `wgpu-rs` project.
+* [wgpu-rs](https://wgpu.rs/) - homepage for the `wgpu-rs` project.
 * [Get started with GPU Compute on the web](https://web.dev/gpu-compute/#compute-shader-code) - it helped and inspired me to write this article.
 * [The sushi picture, by gnokii](https://openclipart.org/detail/132169/sushi) - royalty free sushi.
 * [WGSL Spec](https://www.w3.org/TR/WGSL) - read the doc, it helps!
