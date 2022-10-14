@@ -247,7 +247,7 @@ The rest is straightforward:
 Okay, back to Rust!
 
 ```rust
-let shader = device.create_shader_module(&wgpu::ShaderModuleDescriptor {
+let shader = device.create_shader_module(wgpu::ShaderModuleDescriptor {
     label: Some("Grayscale shader"),
     source: wgpu::ShaderSource::Wgsl(include_str!("shaders/grayscale.wgsl").into()),
 });
@@ -349,7 +349,7 @@ And now we create our compute pass, set our pipeline, bind our textures, and dis
     });
     compute_pass.set_pipeline(&pipeline);
     compute_pass.set_bind_group(0, &texture_bind_group, &[]);
-    compute_pass.dispatch(dispatch_with, dispatch_height, 1);
+    compute_pass.dispatch_workgroups(dispatch_with, dispatch_height, 1);
 }
 ```
 
@@ -461,13 +461,13 @@ Let's map our data, and wait until the submitted actions have been completed.
 
 ```rust
 let buffer_slice = output_buffer.slice(..);
-let mapping = buffer_slice.map_async(wgpu::MapMode::Read);
+buffer_slice.map_async(wgpu::MapMode::Read, |_| {});
 
 device.poll(wgpu::Maintain::Wait);
-mapping.block_on()?;
 ```
 
 We need to wait on `poll` , to make sure that the submitted instructions have been completed, and that the data is available in the mapped buffer.
+`map_async` takes a callback, that probably should be used in real production code to check for error. For this article, I'll just ignore it (bad, bad, bad).
 
 We can then access the data:
 

@@ -47,7 +47,6 @@ fn main() -> anyhow::Result<()> {
     );
 
     // Create an output texture
-
     let output_texture = device.create_texture(&wgpu::TextureDescriptor {
         label: Some("output texture"),
         size: texture_size,
@@ -60,7 +59,7 @@ fn main() -> anyhow::Result<()> {
 
     // Create the compute pipeline and bindings
 
-    let shader = device.create_shader_module(&wgpu::ShaderModuleDescriptor {
+    let shader = device.create_shader_module(wgpu::ShaderModuleDescriptor {
         label: Some("Grayscale shader"),
         source: wgpu::ShaderSource::Wgsl(include_str!("shaders/grayscale.wgsl").into()),
     });
@@ -104,7 +103,7 @@ fn main() -> anyhow::Result<()> {
         });
         compute_pass.set_pipeline(&pipeline);
         compute_pass.set_bind_group(0, &texture_bind_group, &[]);
-        compute_pass.dispatch(dispatch_with, dispatch_height, 1);
+        compute_pass.dispatch_workgroups(dispatch_with, dispatch_height, 1);
     }
 
     // Get the result.
@@ -141,10 +140,9 @@ fn main() -> anyhow::Result<()> {
     queue.submit(Some(encoder.finish()));
 
     let buffer_slice = output_buffer.slice(..);
-    let mapping = buffer_slice.map_async(wgpu::MapMode::Read);
+    buffer_slice.map_async(wgpu::MapMode::Read, |_| {});
 
     device.poll(wgpu::Maintain::Wait);
-    mapping.block_on()?;
 
     let padded_data = buffer_slice.get_mapped_range();
 
