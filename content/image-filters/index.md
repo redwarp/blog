@@ -59,7 +59,7 @@ edition = "2021"
 
 [dependencies]
 anyhow = "1.0"
-bytemuck = "1.7"
+bytemuck = "1.9"
 image = "0.24"
 pollster = "0.2"
 wgpu = "0.14"
